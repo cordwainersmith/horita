@@ -1,0 +1,13 @@
+*.xcodeproj/
+.build/
+DerivedData/
+.swiftpm/
+xcuserdata/
+.DS_Store
+Local.xcconfig
+build/
+dist/
+Docs/
+Scripts/
+CLAUDE.md
+Infra/

@@ -1,0 +1,67 @@
+name: Horita
+options:
+  bundleIdPrefix: dev.liranbaba
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+
+configs:
+  Debug: debug
+  Release: release
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
+
+packages:
+  HoritaCore:
+    path: Core
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    exactVersion: 2.10.0
+  KeyboardShortcuts:
+    url: https://github.com/sindresorhus/KeyboardShortcuts
+    exactVersion: 3.1.0
+
+targets:
+  Horita:
+    type: application
+    platform: macOS
+    sources:
+      - path: App
+        excludes: [Info.plist, Horita.entitlements]
+    dependencies:
+      - package: HoritaCore
+      - package: Sparkle
+      - package: KeyboardShortcuts
+      - sdk: EventKit.framework
+      - sdk: ServiceManagement.framework
+    configFiles:
+      Debug: Local.xcconfig
+    settings:
+      base:
+        PRODUCT_NAME: Horita
+        PRODUCT_BUNDLE_IDENTIFIER: dev.liranbaba.Horita
+        INFOPLIST_FILE: App/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGN_ENTITLEMENTS: App/Horita.entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        MARKETING_VERSION: 0.1.0
+        CURRENT_PROJECT_VERSION: 1
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../Frameworks"
+      configs:
+        Debug:
+          CODE_SIGN_STYLE: Manual
+          CODE_SIGN_IDENTITY: "-"
+          ENABLE_HARDENED_RUNTIME: NO
+        Release:
+          ENABLE_HARDENED_RUNTIME: YES
+          CODE_SIGN_STYLE: Manual
+          CODE_SIGN_IDENTITY: "Developer ID Application"
+          DEVELOPMENT_TEAM: DN8M2CQ4D2
+          OTHER_CODE_SIGN_FLAGS: "--timestamp"
+          CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
+    scheme:
+      testTargets: []

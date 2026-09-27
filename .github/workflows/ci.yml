@@ -1,0 +1,22 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate project
+        run: |
+          touch Local.xcconfig
+          xcodegen generate
+      - name: Build app
+        run: xcodebuild -scheme Horita -configuration Debug CODE_SIGNING_ALLOWED=NO build
+      - name: Test Core
+        run: swift test --package-path Core
