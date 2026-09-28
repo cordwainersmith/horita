@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="Branding/horita-logo-dark.png">
-    <img src="Branding/horita-logo.png" alt="horita" width="320">
+    <source media="(prefers-color-scheme: dark)" srcset=".github/branding/horita-logo-dark.png">
+    <img src=".github/branding/horita-logo.png" alt="horita" width="320">
   </picture>
 </p>
 
@@ -43,7 +43,13 @@ Click it and you get the rest of today in a plain dropdown. Hover a meeting for 
 
 <p align="center"><img src=".github/screenshots/meeting-details.png" alt="A meeting's details submenu with Join Zoom, Copy Meeting Link, time, organizer and attendees" width="640"></p>
 
+A line under Today sums up the day: how many meetings, how much of it is busy, and when you're free. Meetings that overlap or run back-to-back are marked, and once today is done you'll see tomorrow's first meeting. While a meeting is running, the menu bar icon fills in to show how far along it is.
+
+Don't need a recurring meeting in the menu bar title? Hide it from its details. It stays in the dropdown.
+
 Zoom, Google Meet and Microsoft Teams links are picked up automatically. Right-click the menu bar item to jump straight into the next call, or record a keyboard shortcut if you'd rather not reach for the mouse.
+
+Want a nudge before a meeting starts? Turn on reminders and pick a banner with a Join button, or a full-screen reminder you can't miss, with Join, Snooze and Dismiss. They're off by default.
 
 Sharing your screen? There's a setting to hide meeting titles, so your 3pm stays between you and your calendar.
 

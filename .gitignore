@@ -12,3 +12,5 @@ Scripts/
 CLAUDE.md
 Infra/
 .claude/
+/Branding/
+/Local.xcconfig.example
