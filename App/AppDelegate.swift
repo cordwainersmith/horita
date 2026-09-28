@@ -13,6 +13,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var lifecycle: LifecycleObserver!
     private var settings: SettingsWindowController!
     private var updater: Updater!
+    private var reminders: ReminderController!
 
     // With no storyboard, AppKit's default @main entry point never instantiates
     // the delegate, so applicationDidFinishLaunching would never run.
@@ -34,11 +35,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItemController = StatusItemController(
             model: model,
             buildMenu: { [unowned self] in MenuBuilder.build(model: model, actions: menuActions()) },
-            join: { [unowned self] in Joiner.join(model.joinTarget) },
+            join: { [unowned self] in join(model.joinTarget) },
             menuWillOpen: { [unowned self] in repository.refresh(reason: .menuOpened) }
         )
         eventKit = EventKitSource()
         repository = EventRepository(model: model, sources: [eventKit], preferences: preferences)
+        reminders = ReminderController(model: model, preferences: preferences, join: { [unowned self] in join($0) })
         ticker = MinuteTicker(model: model)
         lifecycle = LifecycleObserver(repository: repository, ticker: ticker)
         updater = Updater()
@@ -49,9 +51,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         repository.start()
         ticker.start()
+        reminders.start()
 
         KeyboardShortcuts.onKeyUp(for: .joinNext) { [unowned self] in
-            Joiner.join(model.joinTarget)
+            join(model.joinTarget)
         }
 
         if !preferences.hasCompletedFirstRun {
@@ -59,14 +62,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    /// Every join path goes through here, so a meeting joined early doesn't get a reminder.
+    private func join(_ event: Event?) {
+        Joiner.join(event)
+        if let event {
+            reminders.markJoined(event)
+        }
+    }
+
     private func menuActions() -> MenuActions {
         MenuActions(
-            join: { Joiner.join($0) },
+            join: { [unowned self] in join($0) },
             copyLink: { url in
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(url.absoluteString, forType: .string)
             },
             openURL: { NSWorkspace.shared.open($0) },
+            setMuted: { [unowned self] event, muted in preferences.setMuted(event.muteKey, muted: muted) },
             openSettings: { [unowned self] tab in settings.show(tab: tab) },
             checkForUpdates: { [unowned self] in updater.checkForUpdates() },
             quit: { NSApp.terminate(nil) }

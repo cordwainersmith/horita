@@ -89,14 +89,17 @@ public struct Event: Identifiable, Hashable, Sendable {
     public let openInCalendarURL: URL?
     public let accountEmail: String?
     public let meetingLink: MeetingLink?
+    /// Shared by every occurrence of a recurring event. nil when the source has no such id.
+    public let seriesID: String?
 
     public var calendarKey: String { "\(source.rawValue):\(calendarID)" }
     public var isSolo: Bool { attendees.allSatisfy { $0.isSelf || $0.isResource } }
+    public var muteKey: String { "\(calendarKey)|\(seriesID ?? id)" }
 
     public init(id: String, source: SourceKind, calendarID: String, calendarTitle: String, calendarColorHex: String,
                 title: String, start: Date, end: Date, isAllDay: Bool, status: EventStatus, myResponse: ResponseStatus,
                 attendees: [Attendee], organizer: Attendee?, location: String?, notes: String?, url: URL?,
-                conferenceURL: URL?, openInCalendarURL: URL?, accountEmail: String?) {
+                conferenceURL: URL?, openInCalendarURL: URL?, accountEmail: String?, seriesID: String? = nil) {
         self.id = id
         self.source = source
         self.calendarID = calendarID
@@ -116,6 +119,7 @@ public struct Event: Identifiable, Hashable, Sendable {
         self.conferenceURL = conferenceURL
         self.openInCalendarURL = openInCalendarURL
         self.accountEmail = accountEmail
+        self.seriesID = seriesID
         self.meetingLink = LinkDetector.detect(conferenceURL: conferenceURL, url: url, location: location, notes: notes)
     }
 }

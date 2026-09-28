@@ -27,9 +27,9 @@ public enum NextEventSelector {
             && !event.isSolo
     }
 
-    public static func select(from events: [Event], now: Date, thresholdMinutes: Int) -> Selection {
+    public static func select(from events: [Event], now: Date, thresholdMinutes: Int, muted: Set<String> = []) -> Selection {
         let candidates = events
-            .filter { isTitleCandidate($0) && $0.end > now }
+            .filter { isTitleCandidate($0) && !muted.contains($0.muteKey) && $0.end > now }
             .sorted(by: precedes)
         guard let first = candidates.first else { return .none }
 
@@ -44,6 +44,24 @@ public enum NextEventSelector {
             return .upcoming(first)
         }
         return .beyondThreshold(first)
+    }
+
+    /// Other title candidates running at the same time as the selected event.
+    public static func overlapping(_ selection: Selection, events: [Event], now: Date, muted: Set<String> = []) -> [Event] {
+        let selected: Event
+        switch selection {
+        case .upcoming(let e), .ongoing(let e): selected = e
+        case .none, .beyondThreshold: return []
+        }
+        return events
+            .filter { event in
+                event.id != selected.id
+                    && isTitleCandidate(event)
+                    && !muted.contains(event.muteKey)
+                    && event.end > now
+                    && event.start < selected.end && selected.start < event.end
+            }
+            .sorted(by: precedes)
     }
 
     private static func rank(_ response: ResponseStatus) -> Int {

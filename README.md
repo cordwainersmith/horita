@@ -41,11 +41,13 @@ The countdown only shows up when a meeting is getting close. You decide how clos
 
 Click it and you get the rest of today in a plain dropdown. Hover a meeting for the details: where it is, who organized it, who's coming.
 
+<p align="center"><img src=".github/screenshots/meeting-details.png" alt="A meeting's details submenu with Join Zoom, Copy Meeting Link, time, organizer and attendees" width="640"></p>
+
 Zoom, Google Meet and Microsoft Teams links are picked up automatically. Right-click the menu bar item to jump straight into the next call, or record a keyboard shortcut if you'd rather not reach for the mouse.
 
 Sharing your screen? There's a setting to hide meeting titles, so your 3pm stays between you and your calendar.
 
-<p align="center"><img src=".github/screenshots/settings-general.png" alt="General settings: launch at login, join shortcut, countdown threshold, title length and hiding titles" width="480"></p>
+<p align="center"><img src=".github/screenshots/settings-general.png" alt="General settings: launch at login, join shortcut, countdown threshold, title length, hiding titles and reminders" width="480"></p>
 
 It works with any calendar you've added to your Mac: iCloud, Google, Exchange, whatever shows up in the Calendar app. You choose which ones horita pays attention to.
 
@@ -74,18 +76,6 @@ horita checks once a day and asks before installing anything. You can also choos
 ## What's next
 
 A direct Google Calendar connection, for calendars your Mac can't see, like a work Google account you never added to System Settings. It will talk to your own Google account and nothing else.
-
-## Contributing
-
-Found a bug or have an idea? Open an issue. Pull requests are welcome too.
-
-To build it yourself you'll need Xcode and [XcodeGen](https://github.com/yonaskolb/XcodeGen):
-
-```
-brew install xcodegen
-xcodegen generate
-open Horita.xcodeproj
-```
 
 ## License
 

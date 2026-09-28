@@ -59,6 +59,7 @@ struct CalendarsTab: View {
         if calendars.isEmpty {
             Text("No calendars found.").foregroundStyle(.secondary)
         } else {
+            Toggle("All calendars", isOn: allBinding(for: calendars))
             let groups = Dictionary(grouping: calendars) { $0.accountName ?? String(localized: "Other") }
                 .sorted { $0.key.localizedCaseInsensitiveCompare($1.key) == .orderedAscending }
             ForEach(groups, id: \.key) { account, members in
@@ -75,6 +76,14 @@ struct CalendarsTab: View {
                 }
             }
         }
+    }
+
+    private func allBinding(for calendars: [CalendarInfo]) -> Binding<Bool> {
+        let keys = Set(calendars.map(\.key))
+        return Binding(
+            get: { keys.isSubset(of: preferences.enabledCalendarKeys) },
+            set: { preferences.setCalendars(keys: keys, enabled: $0) }
+        )
     }
 
     private func binding(for calendar: CalendarInfo) -> Binding<Bool> {

@@ -37,10 +37,11 @@ func makeEvent(
     source: SourceKind = .eventKit,
     calendarID: String = "cal-1",
     calendarTitle: String = "Work",
-    accountEmail: String? = nil
+    accountEmail: String? = nil,
+    seriesID: String? = nil
 ) -> Event {
     Event(id: id, source: source, calendarID: calendarID, calendarTitle: calendarTitle, calendarColorHex: "#FF0000",
           title: title, start: start, end: end, isAllDay: isAllDay, status: status, myResponse: myResponse,
           attendees: attendees, organizer: nil, location: location, notes: notes, url: url,
-          conferenceURL: conferenceURL, openInCalendarURL: nil, accountEmail: accountEmail)
+          conferenceURL: conferenceURL, openInCalendarURL: nil, accountEmail: accountEmail, seriesID: seriesID)
 }

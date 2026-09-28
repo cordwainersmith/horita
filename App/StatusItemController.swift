@@ -43,9 +43,8 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         guard render != lastRender, let button = statusItem.button else { return }
         lastRender = render
 
-        let image = NSImage(systemSymbolName: render.iconName, accessibilityDescription: "horita")?
-            .withSymbolConfiguration(.init(pointSize: 14, weight: .regular))
-        image?.isTemplate = true
+        let image = StatusIcon.image(named: render.iconName, progress: render.progress, overlap: render.hasOverlap)
+        image?.accessibilityDescription = "horita"
         button.image = image
 
         if let text = render.text {

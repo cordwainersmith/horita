@@ -52,4 +52,9 @@ import Testing
         let longTitle = makeEvent(title: "Quarterly business review with partners", start: now.addingTimeInterval(1800), end: now.addingTimeInterval(3600))
         #expect(TitleFormatter.statusText(for: .upcoming(longTitle), now: now, hideTitle: false, maxLength: 10) == "Quarterly… · in 30m")
     }
+
+    @Test func durationFromSeconds() {
+        #expect(TitleFormatter.duration(seconds: 3.75 * 3600) == "3h 45m")
+        #expect(TitleFormatter.duration(seconds: -5) == "0m")
+    }
 }

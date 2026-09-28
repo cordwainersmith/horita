@@ -6,6 +6,7 @@ struct MenuActions {
     let join: (Event) -> Void
     let copyLink: (URL) -> Void
     let openURL: (URL) -> Void
+    let setMuted: (Event, Bool) -> Void
     let openSettings: (SettingsTab) -> Void
     let checkForUpdates: (() -> Void)?
     let quit: () -> Void
@@ -44,13 +45,12 @@ enum MenuBuilder {
         let section = DayLayout.today(events: model.events, now: now, calendar: .current)
 
         if let target = model.joinTarget {
-            let clock = target.start > now
-                ? TitleFormatter.countdown(until: target.start, now: now)
-                : TitleFormatter.remaining(until: target.end, now: now)
-            let title = String(localized: "Join: \(TitleFormatter.truncate(target.title, maxLength: rowTitleMaxLength)) \u{00B7} \(clock)")
-            let item = ActionMenuItem(title: title) { actions.join(target) }
+            let item = joinItem(for: target, now: now, actions: actions)
             item.setShortcut(for: .joinNext)
             menu.addItem(item)
+            for other in model.overlappingTargets {
+                menu.addItem(joinItem(for: other, now: now, actions: actions))
+            }
             menu.addItem(.separator())
         }
 
@@ -62,25 +62,39 @@ enum MenuBuilder {
 
         menu.addItem(.sectionHeader(title: String(localized: "Today \u{00B7} \(headerDate(section.day))")))
 
+        if let summary = section.summary {
+            menu.addItem(summaryItem(summary))
+        }
+
         if !section.allDayTitles.isEmpty {
             let line = String(localized: "All day: \(section.allDayTitles.joined(separator: ", "))")
             menu.addItem(disabledItem(TitleFormatter.truncate(line, maxLength: allDayLineMaxLength)))
         }
+
+        let timeFormatter = DateFormatter()
+        timeFormatter.setLocalizedDateFormatFromTemplate("jmm")
+        let muted = model.preferences.mutedSeriesKeys
+        let tomorrowRow = DayLayout.tomorrowFirst(events: model.events, now: now, calendar: .current).map { event in
+            DayRow(event: event, style: event.myResponse == .tentative || event.myResponse == .needsAction ? .tentative : .normal)
+        }
+        let tabLocation = timeColumnWidth(rows: section.rows + [tomorrowRow].compactMap { $0 }, formatter: timeFormatter)
 
         if section.rows.isEmpty {
             if section.allDayTitles.isEmpty {
                 menu.addItem(disabledItem(String(localized: "Nothing on the calendar today")))
             }
         } else {
-            let timeFormatter = DateFormatter()
-            timeFormatter.setLocalizedDateFormatFromTemplate("jmm")
-            let tabLocation = timeColumnWidth(rows: section.rows, formatter: timeFormatter)
             for row in section.rows {
-                menu.addItem(rowItem(row, now: now, timeFormatter: timeFormatter, tabLocation: tabLocation, actions: actions))
+                menu.addItem(rowItem(row, now: now, muted: muted, timeFormatter: timeFormatter, tabLocation: tabLocation, actions: actions))
             }
             if section.allPast {
                 menu.addItem(disabledItem(String(localized: "No more meetings today")))
             }
+        }
+
+        if let tomorrowRow {
+            menu.addItem(.sectionHeader(title: String(localized: "Tomorrow")))
+            menu.addItem(rowItem(tomorrowRow, now: now, muted: muted, timeFormatter: timeFormatter, tabLocation: tabLocation, actions: actions))
         }
 
         menu.addItem(.separator())
@@ -92,6 +106,30 @@ enum MenuBuilder {
         }
         menu.addItem(ActionMenuItem(title: String(localized: "Quit horita"), keyEquivalent: "q", handler: actions.quit))
         return menu
+    }
+
+    private static func joinItem(for event: Event, now: Date, actions: MenuActions) -> ActionMenuItem {
+        let clock = event.start > now
+            ? TitleFormatter.countdown(until: event.start, now: now)
+            : TitleFormatter.remaining(until: event.end, now: now)
+        let title = String(localized: "Join: \(TitleFormatter.truncate(event.title, maxLength: rowTitleMaxLength)) \u{00B7} \(clock)")
+        return ActionMenuItem(title: title) { actions.join(event) }
+    }
+
+    private static func summaryItem(_ summary: DaySummary) -> NSMenuItem {
+        var parts = [
+            summary.meetingCount == 1 ? String(localized: "1 meeting") : String(localized: "\(summary.meetingCount) meetings"),
+            TitleFormatter.duration(seconds: summary.busy),
+        ]
+        if let freeAfter = summary.freeAfter {
+            let formatter = DateFormatter()
+            formatter.setLocalizedDateFormatFromTemplate("jmm")
+            parts.append(String(localized: "free after \(formatter.string(from: freeAfter))"))
+        }
+        let item = disabledItem("")
+        item.attributedTitle = NSAttributedString(string: parts.joined(separator: " \u{00B7} "),
+                                                  attributes: [.font: NSFont.menuFont(ofSize: 0), .foregroundColor: NSColor.secondaryLabelColor])
+        return item
     }
 
     // MARK: - Health rows
@@ -119,16 +157,17 @@ enum MenuBuilder {
 
     // MARK: - Rows
 
-    private static func rowItem(_ row: DayRow, now: Date, timeFormatter: DateFormatter, tabLocation: CGFloat, actions: MenuActions) -> NSMenuItem {
+    private static func rowItem(_ row: DayRow, now: Date, muted: Set<String>, timeFormatter: DateFormatter, tabLocation: CGFloat, actions: MenuActions) -> NSMenuItem {
         let event = row.event
+        let isMuted = muted.contains(event.muteKey)
         let item = NSMenuItem(title: "", action: nil, keyEquivalent: "")
         item.image = colorDot(hex: event.calendarColorHex)
-        item.attributedTitle = rowTitle(row, now: now, timeFormatter: timeFormatter, tabLocation: tabLocation)
-        item.submenu = detailsMenu(for: event, timeFormatter: timeFormatter, actions: actions)
+        item.attributedTitle = rowTitle(row, now: now, isMuted: isMuted, timeFormatter: timeFormatter, tabLocation: tabLocation)
+        item.submenu = detailsMenu(for: event, isMuted: isMuted, timeFormatter: timeFormatter, actions: actions)
         return item
     }
 
-    private static func rowTitle(_ row: DayRow, now: Date, timeFormatter: DateFormatter, tabLocation: CGFloat) -> NSAttributedString {
+    private static func rowTitle(_ row: DayRow, now: Date, isMuted: Bool, timeFormatter: DateFormatter, tabLocation: CGFloat) -> NSAttributedString {
         let event = row.event
         let baseFont = NSFont.menuFont(ofSize: 0)
         var font = baseFont
@@ -168,7 +207,18 @@ enum MenuBuilder {
 
         if event.meetingLink != nil {
             result.append(NSAttributedString(string: " ", attributes: attributes))
-            result.append(videoAttachment(font: font, color: color))
+            result.append(symbolAttachment("video", description: String(localized: "Has meeting link"), font: font, color: color))
+        }
+        if row.overlapsAnother {
+            result.append(NSAttributedString(string: " ", attributes: attributes))
+            result.append(symbolAttachment("square.on.square", description: String(localized: "Overlaps another meeting"), font: font, color: color))
+        } else if row.backToBack {
+            result.append(NSAttributedString(string: " ", attributes: attributes))
+            result.append(symbolAttachment("arrow.right.to.line", description: String(localized: "Back-to-back"), font: font, color: color))
+        }
+        if isMuted {
+            result.append(NSAttributedString(string: " ", attributes: attributes))
+            result.append(symbolAttachment("eye.slash", description: String(localized: "Not shown in menu bar"), font: font, color: color))
         }
         return result
     }
@@ -181,7 +231,7 @@ enum MenuBuilder {
 
     // MARK: - Details submenu
 
-    private static func detailsMenu(for event: Event, timeFormatter: DateFormatter, actions: MenuActions) -> NSMenu {
+    private static func detailsMenu(for event: Event, isMuted: Bool, timeFormatter: DateFormatter, actions: MenuActions) -> NSMenu {
         let menu = NSMenu()
 
         if let link = event.meetingLink {
@@ -189,6 +239,13 @@ enum MenuBuilder {
             join.attributedTitle = NSAttributedString(string: join.title, attributes: [.font: NSFont.boldSystemFont(ofSize: NSFont.menuFont(ofSize: 0).pointSize)])
             menu.addItem(join)
             menu.addItem(ActionMenuItem(title: String(localized: "Copy Meeting Link")) { actions.copyLink(link.url) })
+        }
+        if isMuted || NextEventSelector.isTitleCandidate(event) {
+            let mute = ActionMenuItem(title: String(localized: "Don't Show in Menu Bar")) { actions.setMuted(event, !isMuted) }
+            mute.state = isMuted ? .on : .off
+            menu.addItem(mute)
+        }
+        if menu.numberOfItems > 0 {
             menu.addItem(.separator())
         }
 
@@ -272,11 +329,11 @@ enum MenuBuilder {
         return nil
     }
 
-    private static func videoAttachment(font: NSFont, color: NSColor) -> NSAttributedString {
+    private static func symbolAttachment(_ name: String, description: String, font: NSFont, color: NSColor) -> NSAttributedString {
         let attachment = NSTextAttachment()
         let configuration = NSImage.SymbolConfiguration(pointSize: font.pointSize * 0.85, weight: .regular)
             .applying(.init(paletteColors: [color]))
-        attachment.image = NSImage(systemSymbolName: "video", accessibilityDescription: String(localized: "Has meeting link"))?
+        attachment.image = NSImage(systemSymbolName: name, accessibilityDescription: description)?
             .withSymbolConfiguration(configuration)
         if let size = attachment.image?.size {
             attachment.bounds = CGRect(x: 0, y: (font.capHeight - size.height) / 2, width: size.width, height: size.height)

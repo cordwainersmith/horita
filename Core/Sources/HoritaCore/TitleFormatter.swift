@@ -31,7 +31,11 @@ public enum TitleFormatter {
 
     /// "30m", "1h", "1h 30m". Whole minutes, rounded up.
     public static func duration(from start: Date, to end: Date) -> String {
-        hoursAndMinutes(max(ceilMinutes(end.timeIntervalSince(start)), 0))
+        duration(seconds: end.timeIntervalSince(start))
+    }
+
+    public static func duration(seconds: TimeInterval) -> String {
+        hoursAndMinutes(max(ceilMinutes(seconds), 0))
     }
 
     public static func truncate(_ title: String, maxLength: Int) -> String {

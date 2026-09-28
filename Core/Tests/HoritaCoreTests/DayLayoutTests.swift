@@ -78,4 +78,66 @@ import Testing
         #expect(section.allDayTitles.isEmpty)
         #expect(!section.allPast)
     }
+
+    @Test func marksOverlapAndBackToBack() {
+        let a = makeEvent(title: "A", start: Fixtures.at(9, 0), end: Fixtures.at(10, 0))
+        let b = makeEvent(title: "B", start: Fixtures.at(9, 30), end: Fixtures.at(10, 30))
+        let c = makeEvent(title: "C", start: Fixtures.at(10, 30), end: Fixtures.at(11, 0))
+        let d = makeEvent(title: "D", start: Fixtures.at(13, 0), end: Fixtures.at(14, 0))
+        let declined = makeEvent(title: "X", start: Fixtures.at(13, 30), end: Fixtures.at(14, 0), myResponse: .declined)
+        let rows = layout([a, b, c, d, declined]).rows
+        let flags = Dictionary(uniqueKeysWithValues: rows.map { ($0.event.title, [$0.overlapsAnother, $0.backToBack]) })
+        #expect(flags["A"] == [true, false])
+        #expect(flags["B"] == [true, false])
+        #expect(flags["C"] == [false, true])
+        #expect(flags["D"] == [false, false])
+        #expect(flags["X"] == [false, false])
+    }
+
+    @Test func summaryCountsMeetingsWithoutDoubleCountingOverlaps() {
+        let a = makeEvent(title: "A", start: Fixtures.at(9, 0), end: Fixtures.at(10, 0))
+        let b = makeEvent(title: "B", start: Fixtures.at(9, 30), end: Fixtures.at(10, 30))
+        let c = makeEvent(title: "C", start: Fixtures.at(15, 0), end: Fixtures.at(16, 30))
+        let solo = makeEvent(title: "Focus", start: Fixtures.at(13, 0), end: Fixtures.at(14, 0), attendees: [Fixtures.me])
+        let declined = makeEvent(title: "No", start: Fixtures.at(17, 0), end: Fixtures.at(18, 0), myResponse: .declined)
+        let summary = layout([a, b, c, solo, declined]).summary
+        #expect(summary == DaySummary(meetingCount: 3, busy: 3 * 3600, freeAfter: Fixtures.at(16, 30)))
+    }
+
+    @Test func summaryClipsToTodayAndDropsFreeAfterWhenDone() {
+        let overnight = makeEvent(title: "Overnight", start: Fixtures.at(23, 0, dayOffset: -1), end: Fixtures.at(1, 0))
+        let morning = makeEvent(title: "Morning", start: Fixtures.at(9, 0), end: Fixtures.at(9, 30))
+        let summary = layout([overnight, morning]).summary
+        #expect(summary == DaySummary(meetingCount: 2, busy: 1.5 * 3600, freeAfter: nil))
+    }
+
+    @Test func noSummaryWithoutMeetings() {
+        let solo = makeEvent(title: "Focus", start: Fixtures.at(13, 0), end: Fixtures.at(14, 0), attendees: [Fixtures.me])
+        #expect(layout([solo]).summary == nil)
+        #expect(layout([]).summary == nil)
+    }
+
+    @Test func tomorrowFirstWaitsForTodayToFinish() {
+        let today = makeEvent(title: "Today", start: Fixtures.at(15, 0), end: Fixtures.at(16, 0))
+        let tomorrow = makeEvent(title: "Tomorrow", start: Fixtures.at(9, 30, dayOffset: 1), end: Fixtures.at(10, 0, dayOffset: 1))
+        let calendar = Fixtures.calendar
+        #expect(DayLayout.tomorrowFirst(events: [today, tomorrow], now: now, calendar: calendar) == nil)
+        #expect(DayLayout.tomorrowFirst(events: [today, tomorrow], now: Fixtures.at(16, 0), calendar: calendar) == tomorrow)
+        #expect(DayLayout.tomorrowFirst(events: [tomorrow], now: now, calendar: calendar) == tomorrow)
+    }
+
+    @Test func tomorrowFirstSkipsDeclinedAllDayAndCanceled() {
+        let declinedToday = makeEvent(title: "No", start: Fixtures.at(15, 0), end: Fixtures.at(16, 0), myResponse: .declined)
+        let allDay = makeEvent(title: "OOO", start: Fixtures.at(0, 0, dayOffset: 1), end: Fixtures.at(0, 0, dayOffset: 2), isAllDay: true)
+        let declined = makeEvent(title: "Declined", start: Fixtures.at(8, 0, dayOffset: 1), end: Fixtures.at(9, 0, dayOffset: 1), myResponse: .declined)
+        let canceled = makeEvent(title: "Canceled", start: Fixtures.at(8, 30, dayOffset: 1), end: Fixtures.at(9, 0, dayOffset: 1), status: .canceled)
+        let first = makeEvent(title: "First", start: Fixtures.at(10, 0, dayOffset: 1), end: Fixtures.at(10, 30, dayOffset: 1))
+        let events = [declinedToday, allDay, declined, canceled, first]
+        #expect(DayLayout.tomorrowFirst(events: events, now: now, calendar: Fixtures.calendar) == first)
+    }
+
+    @Test func tomorrowFirstNilWhenTomorrowIsEmpty() {
+        let dayAfter = makeEvent(title: "Later", start: Fixtures.at(9, 0, dayOffset: 2), end: Fixtures.at(10, 0, dayOffset: 2))
+        #expect(DayLayout.tomorrowFirst(events: [dayAfter], now: now, calendar: Fixtures.calendar) == nil)
+    }
 }

@@ -97,7 +97,8 @@ final class EventKitSource: CalendarSource, @unchecked Sendable {
             url: ekEvent.url,
             conferenceURL: nil,
             openInCalendarURL: URL(string: "ical://ekevent/\(ekEvent.calendarItemIdentifier)"),
-            accountEmail: accountTitle.flatMap { $0.contains("@") ? $0 : nil }
+            accountEmail: accountTitle.flatMap { $0.contains("@") ? $0 : nil },
+            seriesID: ekEvent.calendarItemExternalIdentifier ?? ekEvent.calendarItemIdentifier
         )
     }
 

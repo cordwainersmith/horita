@@ -2,6 +2,10 @@ import Foundation
 import Observation
 import HoritaCore
 
+enum ReminderStyle: String, CaseIterable {
+    case off, banner, fullScreen
+}
+
 @MainActor @Observable
 final class Preferences {
     private enum Key {
@@ -11,10 +15,15 @@ final class Preferences {
         static let enabledCalendarKeys = "enabledCalendarKeys"
         static let hasCompletedFirstRun = "hasCompletedFirstRun"
         static let lastEventKitCalendarIDs = "lastEventKitCalendarIDs"
+        static let mutedSeriesKeys = "mutedSeriesKeys"
+        static let reminderStyle = "reminderStyle"
+        static let reminderLeadMinutes = "reminderLeadMinutes"
+        static let reminderSound = "reminderSound"
     }
 
     static let thresholdRange = 5...240
     static let titleLengthRange = 10...60
+    static let reminderLeadChoices = [1, 2, 5, 10]
 
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored var onCalendarSelectionChanged: (() -> Void)?
@@ -25,6 +34,10 @@ final class Preferences {
     private var enabledKeysStorage: Set<String>
     private var firstRunStorage: Bool
     private var lastEventKitIDsStorage: [String]
+    private var mutedStorage: Set<String>
+    private var reminderStyleStorage: ReminderStyle
+    private var reminderLeadStorage: Int
+    private var reminderSoundStorage: Bool
 
     /// Calendar key -> twin calendar key. Set by EventRepository after each calendar fetch.
     var twins: [String: String] = [:]
@@ -37,6 +50,10 @@ final class Preferences {
         enabledKeysStorage = Set(defaults.stringArray(forKey: Key.enabledCalendarKeys) ?? [])
         firstRunStorage = defaults.bool(forKey: Key.hasCompletedFirstRun)
         lastEventKitIDsStorage = defaults.stringArray(forKey: Key.lastEventKitCalendarIDs) ?? []
+        mutedStorage = Set(defaults.stringArray(forKey: Key.mutedSeriesKeys) ?? [])
+        reminderStyleStorage = defaults.string(forKey: Key.reminderStyle).flatMap(ReminderStyle.init(rawValue:)) ?? .off
+        reminderLeadStorage = Self.validLead(defaults.object(forKey: Key.reminderLeadMinutes) as? Int)
+        reminderSoundStorage = defaults.bool(forKey: Key.reminderSound)
     }
 
     var thresholdMinutes: Int {
@@ -63,6 +80,30 @@ final class Preferences {
         }
     }
 
+    var reminderStyle: ReminderStyle {
+        get { reminderStyleStorage }
+        set {
+            reminderStyleStorage = newValue
+            defaults.set(newValue.rawValue, forKey: Key.reminderStyle)
+        }
+    }
+
+    var reminderLeadMinutes: Int {
+        get { reminderLeadStorage }
+        set {
+            reminderLeadStorage = Self.validLead(newValue)
+            defaults.set(reminderLeadStorage, forKey: Key.reminderLeadMinutes)
+        }
+    }
+
+    var reminderSound: Bool {
+        get { reminderSoundStorage }
+        set {
+            reminderSoundStorage = newValue
+            defaults.set(newValue, forKey: Key.reminderSound)
+        }
+    }
+
     var hasCompletedFirstRun: Bool {
         get { firstRunStorage }
         set {
@@ -80,6 +121,17 @@ final class Preferences {
     }
 
     var enabledCalendarKeys: Set<String> { enabledKeysStorage }
+
+    /// `Event.muteKey`s the user hid from the menu bar title. Never pruned: events outside the fetch window are unknown.
+    var mutedSeriesKeys: Set<String> { mutedStorage }
+
+    func setMuted(_ key: String, muted: Bool) {
+        var keys = mutedStorage
+        if muted { keys.insert(key) } else { keys.remove(key) }
+        guard keys != mutedStorage else { return }
+        mutedStorage = keys
+        defaults.set(keys.sorted(), forKey: Key.mutedSeriesKeys)
+    }
 
     /// Enables or disables one calendar. Enabling a calendar disables its twin in the same write.
     /// Returns the twin key that was disabled, if any.
@@ -102,6 +154,22 @@ final class Preferences {
         return disabledTwin
     }
 
+    /// Enables or disables several calendars in one write. Enabling drops their twins, like `setCalendar`.
+    func setCalendars(keys: Set<String>, enabled: Bool) {
+        var result: Set<String>
+        if enabled {
+            result = enabledKeysStorage.union(keys)
+            for key in keys {
+                if let twin = twins[key] { result.remove(twin) }
+            }
+        } else {
+            result = enabledKeysStorage.subtracting(keys)
+        }
+        guard result != enabledKeysStorage else { return }
+        writeEnabledKeys(result)
+        onCalendarSelectionChanged?()
+    }
+
     /// Bulk-enables calendars during a refresh (new suggested defaults) without firing the change callback,
     /// since the caller is already mid-refresh and will fetch with the updated set.
     func enableSilently(keys: Set<String>) {
@@ -121,6 +189,10 @@ final class Preferences {
     private func writeEnabledKeys(_ keys: Set<String>) {
         enabledKeysStorage = keys
         defaults.set(keys.sorted(), forKey: Key.enabledCalendarKeys)
+    }
+
+    private static func validLead(_ value: Int?) -> Int {
+        value.flatMap { reminderLeadChoices.contains($0) ? $0 : nil } ?? 2
     }
 
     private static func clamp(_ value: Int, to range: ClosedRange<Int>) -> Int {

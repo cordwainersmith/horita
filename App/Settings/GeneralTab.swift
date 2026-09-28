@@ -8,6 +8,7 @@ struct GeneralTab: View {
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
     @State private var loginItemNeedsApproval = SMAppService.mainApp.status == .requiresApproval
     @State private var loginItemError: String?
+    @State private var notificationsDenied = false
 
     private let didBecomeActive = NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)
 
@@ -40,10 +41,48 @@ struct GeneralTab: View {
                     Text("Useful when screen sharing.")
                 }
             }
+            Section("Reminders") {
+                Picker("Remind me", selection: $preferences.reminderStyle) {
+                    Text("Off").tag(ReminderStyle.off)
+                    Text("Banner").tag(ReminderStyle.banner)
+                    Text("Full screen").tag(ReminderStyle.fullScreen)
+                }
+                Picker("Before start", selection: $preferences.reminderLeadMinutes) {
+                    ForEach(Preferences.reminderLeadChoices, id: \.self) { minutes in
+                        Text("\(minutes) min").tag(minutes)
+                    }
+                }
+                .disabled(preferences.reminderStyle == .off)
+                Toggle("Play a sound", isOn: $preferences.reminderSound)
+                    .disabled(preferences.reminderStyle == .off)
+                if preferences.reminderStyle == .banner && notificationsDenied {
+                    Text("Notifications for horita are turned off in System Settings.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Button("Open Notification Settings\u{2026}") {
+                        NSWorkspace.shared.open(NotificationPermission.settingsURL)
+                    }
+                }
+            }
         }
         .formStyle(.grouped)
-        .onAppear(perform: refreshLoginItemStatus)
-        .onReceive(didBecomeActive) { _ in refreshLoginItemStatus() }
+        .onAppear {
+            refreshLoginItemStatus()
+            refreshNotificationStatus()
+        }
+        .onReceive(didBecomeActive) { _ in
+            refreshLoginItemStatus()
+            refreshNotificationStatus()
+        }
+        .onChange(of: preferences.reminderStyle) { _, style in
+            guard style == .banner else { return }
+            Task { notificationsDenied = !(await NotificationPermission.request()) }
+        }
+    }
+
+    private func refreshNotificationStatus() {
+        guard preferences.reminderStyle == .banner else { return }
+        Task { notificationsDenied = await NotificationPermission.status() == .denied }
     }
 
     private var launchAtLoginBinding: Binding<Bool> {

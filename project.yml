@@ -38,6 +38,7 @@ targets:
       - package: KeyboardShortcuts
       - sdk: EventKit.framework
       - sdk: ServiceManagement.framework
+      - sdk: UserNotifications.framework
     configFiles:
       Debug: Local.xcconfig
     settings:
@@ -48,7 +49,7 @@ targets:
         GENERATE_INFOPLIST_FILE: NO
         CODE_SIGN_ENTITLEMENTS: App/Horita.entitlements
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        MARKETING_VERSION: 0.1.0
+        MARKETING_VERSION: 0.2.0
         CURRENT_PROJECT_VERSION: 1
         LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../Frameworks"
       configs:
