@@ -121,8 +121,6 @@ final class EventRepository {
     }
 
     private func reconcileSelection(kind: SourceKind, calendars: [CalendarInfo]) {
-        preferences.pruneCalendarKeys(source: kind, existing: Set(calendars.map(\.key)))
-
         var eventKitCalendars = states[.eventKit]?.calendars ?? []
         var appsScriptCalendars = states[.appsScript]?.calendars ?? []
         if kind == .eventKit { eventKitCalendars = calendars } else { appsScriptCalendars = calendars }
@@ -142,7 +140,7 @@ final class EventRepository {
                 preferences.enableSilently(keys: Set(newDefaults))
                 log.info("enabled \(newDefaults.count) new suggested-default calendars")
             }
-            preferences.lastEventKitCalendarIDs = calendars.map(\.id)
+            preferences.lastEventKitCalendarIDs = known.union(calendars.map(\.id)).sorted()
         }
     }
 

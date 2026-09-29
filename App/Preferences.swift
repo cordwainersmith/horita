@@ -178,14 +178,6 @@ final class Preferences {
         writeEnabledKeys(merged)
     }
 
-    /// Drops keys of `source` calendars that no longer exist.
-    func pruneCalendarKeys(source: SourceKind, existing: Set<String>) {
-        let prefix = "\(source.rawValue):"
-        let kept = enabledKeysStorage.filter { !$0.hasPrefix(prefix) || existing.contains($0) }
-        guard kept != enabledKeysStorage else { return }
-        writeEnabledKeys(kept)
-    }
-
     private func writeEnabledKeys(_ keys: Set<String>) {
         enabledKeysStorage = keys
         defaults.set(keys.sorted(), forKey: Key.enabledCalendarKeys)
