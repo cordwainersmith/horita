@@ -8,6 +8,7 @@ struct MenuActions {
     let openURL: (URL) -> Void
     let setMuted: (Event, Bool) -> Void
     let openSettings: (SettingsTab) -> Void
+    let fixNotifications: () -> Void
     let checkForUpdates: (() -> Void)?
     let quit: () -> Void
 }
@@ -149,6 +150,14 @@ enum MenuBuilder {
             let item = ActionMenuItem(title: String(localized: "No calendars selected. Choose calendars\u{2026}")) {
                 actions.openSettings(.calendars)
             }
+            item.image = warningImage()
+            items.append(item)
+        }
+        if model.preferences.reminderStyle == .banner, model.notificationAccess != .allowed {
+            let title = model.notificationAccess == .notRequested
+                ? String(localized: "Reminder banners need permission. Allow Notifications\u{2026}")
+                : String(localized: "Reminder banners are turned off. Open System Settings\u{2026}")
+            let item = ActionMenuItem(title: title, handler: actions.fixNotifications)
             item.image = warningImage()
             items.append(item)
         }

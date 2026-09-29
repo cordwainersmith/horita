@@ -36,7 +36,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             model: model,
             buildMenu: { [unowned self] in MenuBuilder.build(model: model, actions: menuActions()) },
             join: { [unowned self] in join(model.joinTarget) },
-            menuWillOpen: { [unowned self] in repository.refresh(reason: .menuOpened) }
+            menuWillOpen: { [unowned self] in
+                repository.refresh(reason: .menuOpened)
+                reminders.refreshNotificationAccess()
+            }
         )
         eventKit = EventKitSource()
         repository = EventRepository(model: model, sources: [eventKit], preferences: preferences)
@@ -80,6 +83,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             openURL: { NSWorkspace.shared.open($0) },
             setMuted: { [unowned self] event, muted in preferences.setMuted(event.muteKey, muted: muted) },
             openSettings: { [unowned self] tab in settings.show(tab: tab) },
+            fixNotifications: { [unowned self] in reminders.fixNotificationAccess() },
             checkForUpdates: { [unowned self] in updater.checkForUpdates() },
             quit: { NSApp.terminate(nil) }
         )

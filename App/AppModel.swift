@@ -17,6 +17,7 @@ final class AppModel {
     private(set) var events: [Event] = []
     private(set) var calendars: [CalendarInfo] = []
     private(set) var health: [SourceKind: SourceHealth] = [:]
+    var notificationAccess: NotificationPermission.Access = .allowed
     var now: Date = .now
 
     init(preferences: Preferences) {

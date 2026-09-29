@@ -36,6 +36,29 @@ final class ReminderController {
         snoozed[event.id] = nil
     }
 
+    /// Only banners depend on notification permission, so other styles leave the last value alone.
+    func refreshNotificationAccess() {
+        guard preferences.reminderStyle == .banner else { return }
+        Task {
+            let access = await NotificationPermission.access()
+            if model.notificationAccess != access {
+                model.notificationAccess = access
+            }
+        }
+    }
+
+    /// Asks once while macOS has never prompted, otherwise opens horita's page in Notification settings.
+    func fixNotificationAccess() {
+        Task {
+            if await NotificationPermission.access() == .notRequested {
+                _ = await NotificationPermission.request()
+            } else {
+                NSWorkspace.shared.open(NotificationPermission.settingsURL)
+            }
+            refreshNotificationAccess()
+        }
+    }
+
     // Same one-shot re-registration as StatusItemController.observe().
     private func observe() {
         withObservationTracking {
@@ -56,6 +79,8 @@ final class ReminderController {
         handled.formIntersection(ids)
         snoozed = snoozed.filter { ids.contains($0.key) }
         guard style != .off else { return }
+        // Runs on every minute tick, which picks up a change made in System Settings.
+        refreshNotificationAccess()
 
         var toShow = ReminderPlanner.due(events: events, now: now, leadMinutes: lead, muted: muted, excluding: handled)
         handled.formUnion(toShow.map(\.id))
@@ -73,6 +98,9 @@ final class ReminderController {
 
         switch style {
         case .banner:
+            if model.notificationAccess != .allowed {
+                log.error("notifications not allowed, banner will not show")
+            }
             toShow.forEach { banner.present($0, now: now) }
         case .fullScreen:
             if preferences.reminderSound {
