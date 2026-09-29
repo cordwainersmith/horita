@@ -7,6 +7,13 @@
 
 <p align="center"><strong>Your next meeting, in the menu bar.</strong></p>
 
+<p align="center">
+  <a href="https://github.com/cordwainersmith/horita/releases/latest"><img src="https://img.shields.io/github/v/release/cordwainersmith/horita?label=release" alt="Latest release"></a>
+  <img src="https://img.shields.io/badge/macOS-14%2B-blue" alt="macOS 14 or newer">
+  <img src="https://img.shields.io/badge/notarized-by%20Apple-brightgreen" alt="Notarized by Apple">
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/cordwainersmith/horita" alt="MIT license"></a>
+</p>
+
 <p align="center"><img src=".github/screenshots/dropdown.png" alt="The horita dropdown listing today's meetings" width="400"></p>
 
 <p align="center">
@@ -72,6 +79,12 @@ Open System Settings > Privacy & Security > Calendars and turn horita on.
 
 **A calendar is missing.**
 horita sees the calendars in the Calendar app. Add the account in System Settings > Internet Accounts, then switch the calendar on in horita's Settings > Calendars.
+
+**I can't see horita in the menu bar.**
+On a MacBook with a notch, menu bar items that don't fit get hidden behind it. Quit a few other menu bar apps or use a menu bar manager to make room. On macOS 26, also check that horita is allowed in System Settings > Menu Bar.
+
+**How is this different from MeetingBar?**
+MeetingBar is a great app and does more: it knows over 50 meeting services and has lots of options. horita does less on purpose. It stays a small icon until a meeting is close, sums up your day in one line, marks overlapping meetings, and can hide titles while you share your screen. If you join Webex or Discord calls, MeetingBar is the better pick.
 
 **How do I quit it?**
 Click the menu bar item and choose Quit horita at the bottom of the dropdown.
