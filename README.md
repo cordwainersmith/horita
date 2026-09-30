@@ -14,7 +14,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/github/license/cordwainersmith/horita" alt="MIT license"></a>
 </p>
 
-<p align="center"><img src=".github/screenshots/dropdown.png" alt="The horita dropdown listing today's meetings" width="400"></p>
+<p align="center"><img src=".github/screenshots/horita-demo.gif" alt="horita in the menu bar: the icon turns into a countdown, the dropdown lists today's meetings, and one click joins the call"></p>
 
 <p align="center">
   <a href="https://dl.horita.app/latest/Horita.dmg"><strong>Download for Mac</strong></a>
